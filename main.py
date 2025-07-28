@@ -1,10 +1,12 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from db.main import init_db
 from routes.register import registerR
 from routes.login import loginR
 from routes.listing import listingR
 import uvicorn
+
 
 
 @asynccontextmanager
@@ -18,6 +20,8 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(registerR)
 app.include_router(loginR)
 app.include_router(listingR)
+
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=("GET", "POST", "PUT", "DELETE"))
 
 @app.get('/')
 def home():

@@ -2,8 +2,13 @@ from pydantic import BaseModel
 from sqlmodel import SQLModel, Field, Column, ForeignKey
 from uuid import UUID, uuid4
 import sqlalchemy.dialects.postgresql as pg
-from sqlalchemy.orm import relationship
-from typing import Optional, List, Annotated
+from sqlalchemy.orm import Relationship
+from typing import Optional, Annotated
+
+
+class TokenModel(BaseModel):
+    access_token: str
+    token_type: str
 
 class RegisterModel(BaseModel):
     username: str
