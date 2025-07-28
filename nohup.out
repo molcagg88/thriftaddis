@@ -1,0 +1,21 @@
+INFO:     Started server process [936779]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [936779]
+INFO:     Started server process [989531]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:37062 - "GET / HTTP/1.1" 200 OK
+INFO:     91.204.209.203:53532 - "GET / HTTP/1.1" 200 OK
+INFO:     91.204.209.203:54102 - "GET / HTTP/1.1" 200 OK
+INFO:     91.204.209.203:52096 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35868 - "GET / HTTP/1.1" 200 OK
+INFO:     196.191.60.130:0 - "GET / HTTP/1.1" 200 OK
+INFO:     196.191.60.130:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     91.204.209.203:0 - "GET / HTTP/1.1" 200 OK
+INFO:     196.191.60.130:0 - "GET / HTTP/1.1" 200 OK
