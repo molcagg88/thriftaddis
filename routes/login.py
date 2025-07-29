@@ -11,7 +11,7 @@ async def login(data: LoginModel, session: AsyncSession = Depends(get_session)):
     try:
         response = await authUser(data, session)
         if response==True:
-            access_token = create_access_token(data={"username":data.username})
+            access_token = create_access_token(data={"sub":data.username})
             return TokenModel(access_token=access_token, token_type="Bearer")
         else:
             return response

@@ -10,6 +10,9 @@ class TokenModel(BaseModel):
     access_token: str
     token_type: str
 
+class TokenData(BaseModel):
+    username: str
+
 class RegisterModel(BaseModel):
     username: str
     fname: str
@@ -27,7 +30,6 @@ class ItemCreate(BaseModel):
     price: float
     category: str
     condition: str
-    seller_id: UUID
     
 class ItemUpdate(BaseModel):
     id: int
@@ -36,11 +38,10 @@ class ItemUpdate(BaseModel):
     price: Optional[float] = None
     category: Optional[str] = None
     condition: Optional[str] = None
-    seller_id: UUID
+    
 
 class DelItem(BaseModel):
     iid: int
-    seller_id: UUID
 
 class User(SQLModel, table=True):
     uid: UUID = Field(
@@ -54,6 +55,16 @@ class User(SQLModel, table=True):
     password: str
 
     # items: Annotated[List["Item"], relationship(back_populates= "seller")]
+
+class UserPydantic(BaseModel):
+    class Config:
+        orm_mode = True
+    uid: UUID
+    username: str
+    fname: str
+    lname: str
+    email: str 
+    password: str
 
 class Item(SQLModel, table=True):
     id: int = Field(primary_key=True)
