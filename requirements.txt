@@ -7,3 +7,4 @@ bcrypt
 python-dotenv
 pydantic
 PyJWT
+cryptography = 39.0.1
