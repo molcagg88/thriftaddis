@@ -12,8 +12,8 @@ async def register(data: RegisterModel, session: AsyncSession = Depends(get_sess
         response = await createUser(data, session)
         if response["success"]:
             try:
-                access_token = create_access_token(data={"user":data.username})
-                return TokenModel(access_token=access_token, token_type="Bearer")
+                access_token = create_access_token(data={"sub":data.username})
+                return {"access_token":access_token, "token_type":"Bearer"}
             except Exception as e:
                 raise e
     except Exception as err:
