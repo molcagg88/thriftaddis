@@ -13,7 +13,7 @@ async def register(data: RegisterModel, session: AsyncSession = Depends(get_sess
         if response["success"]:
             try:
                 access_token = create_access_token(data={"sub":data.username})
-                return TokenModel(access_token=access_token, token_type="Bearer")
+                return {"access_token":access_token, "token_type":"Bearer"}
             except Exception as e:
                 raise e
     except Exception as err:

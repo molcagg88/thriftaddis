@@ -39,7 +39,7 @@ async def updateItem(update_data: ItemUpdate, userData: UserPydantic):
     
 async def delListing(del_item: DelItem, userData: UserPydantic):
     async with get_db_session() as session:#type:ignore
-        item_ = await session.exec(select(Item).where(and_(Item.id==del_item.iid, Item.seller_id == userData.uid)))
+        item_ = await session.exec(select(Item).where(and_(Item.id==del_item.id, Item.seller_id == userData.uid)))
         item = item_.first()
         
         if not item:
@@ -48,7 +48,10 @@ async def delListing(del_item: DelItem, userData: UserPydantic):
         await session.delete(item)    
         await session.commit()
         return {'success':True, 'deleted':item}
-
+    
+#   
+#Fetches items listed by user
+#
 async def fetchUserItems(user_id: UUID):
     async with get_db_session() as session:#type:ignore
         statement = select(Item).where(Item.seller_id == user_id) #type:ignore

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from db.models import LoginModel, TokenModel
 from db.main import get_session
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -12,8 +12,8 @@ async def login(data: LoginModel, session: AsyncSession = Depends(get_session)):
         response = await authUser(data, session)
         if response==True:
             access_token = create_access_token(data={"sub":data.username})
-            return TokenModel(access_token=access_token, token_type="Bearer")
+            return {"access_token":access_token, "token_type":"Bearer"}
         else:
-            return response
+            raise HTTPException(401, detail="Login unsuccessful")
     except Exception as err:
         raise err

@@ -21,14 +21,14 @@ async def getUserListings(userData: Annotated[UserPydantic, Depends(get_current_
         raise HTTPException(404, "Fetch user listings returned empty")
     
 
-@listingR.post('/', response_model=None)
+@listingR.post('/')
 async def createListing(listing_data: ItemCreate, userData: Annotated[UserPydantic, Depends(get_current_user)]):
     
     response = await listItem(listing_data, userData)
     if response["success"]:
         return response
     else:
-        return {'status':'HOUSTON WE HAVE A PROBLEM'}
+        raise HTTPException(400, detail="Failed to create listing")
     
 @listingR.put('/')
 async def updateListing(update_data: ItemUpdate, userData: Annotated[UserPydantic, Depends(get_current_user)]):

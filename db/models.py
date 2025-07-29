@@ -41,7 +41,7 @@ class ItemUpdate(BaseModel):
     
 
 class DelItem(BaseModel):
-    iid: int
+    id: int
 
 class User(SQLModel, table=True):
     uid: UUID = Field(
@@ -58,7 +58,7 @@ class User(SQLModel, table=True):
 
 class UserPydantic(BaseModel):
     class Config:
-        orm_mode = True
+        from_attributes = True
     uid: UUID
     username: str
     fname: str
