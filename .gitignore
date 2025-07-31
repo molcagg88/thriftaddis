@@ -1,2 +1,7 @@
 .env
-venv/
+venv/__pycache__/ 
+*.pyc 
+*.pyo 
+*.pyd 
+public_html.rar
+public_html2.zip

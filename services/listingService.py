@@ -6,8 +6,6 @@ from db.main import get_db_session
 from sqlalchemy.orm import selectinload
 from uuid import UUID
 
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 async def listItem(data: ItemCreate, userData: UserPydantic):
     
     try:
@@ -33,7 +31,7 @@ async def updateItem(update_data: ItemUpdate, userData: UserPydantic):
                 setattr(match_, key, val)
             await session.commit()
             await session.refresh(match_)
-            return match_
+            return {"success":True, "data":match_}
         else:
             raise HTTPException(404, detail="Item not found")
     

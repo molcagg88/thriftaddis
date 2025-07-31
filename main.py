@@ -5,6 +5,7 @@ from db.main import init_db
 from routes.register import registerR
 from routes.login import loginR
 from routes.listing import listingR
+from routes.auction import auctionR
 import uvicorn
 
 
@@ -20,6 +21,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(registerR)
 app.include_router(loginR)
 app.include_router(listingR)
+app.include_router(auctionR)
 
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=("GET", "POST", "PUT", "DELETE"))
 
