@@ -4,7 +4,7 @@ sqlmodel
 sqlalchemy
 asyncpg
 bcrypt
-python-dotenv
 pydantic
+pydantic-settings
 PyJWT
 cryptography = 39.0.1
