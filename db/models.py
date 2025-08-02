@@ -94,6 +94,7 @@ class Item(SQLModel, table=True):
     price: float = Field(index=True)
     category: str
     condition: Conditions 
+
     seller_id: UUID = Field(
         sa_column=Column(
             pg.UUID,
@@ -102,13 +103,24 @@ class Item(SQLModel, table=True):
             index=True
         )
     )
+
+    auction_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("auction.auction_id", ondelete="SET NULL"),
+            nullable=True
+        )
+    )
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
     )
 
-    seller: Optional[User] = Relationship(back_populates="items")#type: ignore
-    auction: Optional["Auction"] = Relationship(back_populates="item")#type:ignore
+    seller: Optional[User] = Relationship(back_populates="items")  # type: ignore
+
+    auction: Optional["Auction"] = Relationship(back_populates="items")  # type: ignore
+
 
 class Status(str, Enum):
     upcoming = "UPCOMING"
@@ -117,9 +129,6 @@ class Status(str, Enum):
 
 class Auction(SQLModel, table=True):
     auction_id: int = Field(primary_key=True)
-    
-    item_id: int = Field(foreign_key="item.id", nullable=False)
-    item: Optional["Item"] = Relationship(back_populates="auction")  # type: ignore
 
     starting_time: datetime = Field(
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
@@ -135,6 +144,9 @@ class Auction(SQLModel, table=True):
     starting_price: float
     status: Status = Field(index=True)
 
+    # One Auction has many Items:
+    items: List[Item] = Relationship(back_populates="auction")
+    
 class Bid(SQLModel, table=True):
     id: int = Field(primary_key=True, index=True)
     bidder_id: UUID = Field(foreign_key="user.uid")
@@ -150,11 +162,11 @@ class AuctionReq(BaseModel):
             raise ValueError("End time must be after start time")
         return v
     item_id: Optional[int] = None
-    name: str
-    description: str
-    price: float
-    category: str
-    condition: Conditions
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    condition: Optional[Conditions] = None
     starting_time: datetime
     ending_time: datetime
 
@@ -198,3 +210,15 @@ class ItemUpdateAuc(BaseModel):
     category: Optional[str] = None
     condition: Optional[Conditions] = None
 
+class AuctionDelReq(BaseModel):
+    auction_id: int
+    keep_item: bool
+
+class ItemInAucCreate(BaseModel):
+    id: Optional[int] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    condition: Optional[Conditions] = None
+    seller_id: Optional[UUID] = None

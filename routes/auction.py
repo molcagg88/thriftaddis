@@ -1,14 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
-from db.models import AuctionReq, UserPydantic, ItemPydantic, AucServe, AucServeUpdate, AuctionUpdate, ItemUpdateAuc
+from db.models import (AuctionReq, UserPydantic, ItemPydantic, 
+                        AucServe, AucServeUpdate, AuctionUpdate,
+                         AuctionDelReq, ItemUpdateAuc, ItemInAucCreate)
 from typing import Annotated
 from services.authService import get_current_user
-from services.auctionService import create_auction, update_auction
+from services.auctionService import create_auction, update_auction, delete_auction, get_user_auctions
 
 auctionR = APIRouter(prefix="/auction")
 
+@auctionR.get("/")
+async def get_user_aucs(userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    response = await get_user_auctions(userData)
+    return response
+
 @auctionR.post("/")
 async def createAuction(data: AuctionReq, userData: Annotated[UserPydantic, Depends(get_current_user)]):
-    to_auc = ItemPydantic(id=getattr(data, 'item_id', None), name=data.name, seller_id=userData.uid, description=data.description, price=data.price, category=data.category, condition=data.condition)
+    if not data.item_id:
+        to_auc = ItemInAucCreate(name=data.name, seller_id=userData.uid, description=data.description, price=data.price, category=data.category, condition=data.condition)
+    elif data.item_id:
+        to_auc = ItemInAucCreate(id=data.item_id)
+
     response = await create_auction(item=to_auc, auc_serve=AucServe(starting_time=data.starting_time, ending_time=data.ending_time), userData=userData)
     if response["success"]:#type:ignore
         return response
@@ -28,3 +39,15 @@ async def updateAuction(data: AuctionUpdate, userData: Annotated[UserPydantic, D
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected exception triggered in updateAuction, {e}")
     
+@auctionR.delete('/')    
+async def delete_auc(del_request: AuctionDelReq, userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    try:
+        response = await delete_auction(del_request, userData)
+        if not response["success"]:
+            raise HTTPException(500, detail="Error in response from delete auction")
+        
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail="Unexpected error in delete auction route: {e}")
