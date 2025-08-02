@@ -1,12 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from db.models import ItemCreate, ItemUpdate, User, DelItem, UserPydantic
-from uuid import UUID
+from db.models import ItemCreate, ItemUpdate, DelItem, UserPydantic
 from typing import Annotated
-from sqlmodel.ext.asyncio.session import AsyncSession
-from db.main import get_session
 from services.authService import get_current_user
 from services.listingService import listItem, updateItem, delListing, fetchUserItems
-from pydantic import BaseModel
 
 listingR = APIRouter(prefix='/listing')
 
@@ -34,9 +30,14 @@ async def createListing(listing_data: ItemCreate, userData: Annotated[UserPydant
 async def updateListing(update_data: ItemUpdate, userData: Annotated[UserPydantic, Depends(get_current_user)]):
     try:
         response = await updateItem(update_data, userData)
-        return response
+        if response["success"]:
+            return response
+        else:
+            raise HTTPException(400, detail="Unknown error, triggered at update listing")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise e
+        raise HTTPException(500, detail=f"Unhandled error: {e}")
     
 @listingR.delete('/')
 async def deleteListing(del_Item: DelItem, userData: Annotated[UserPydantic, Depends(get_current_user)]):
