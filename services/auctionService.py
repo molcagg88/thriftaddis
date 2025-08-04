@@ -1,7 +1,8 @@
 from db.models import (ItemPydantic, UserPydantic, 
                        Item, Auction, AucServe, Status, 
                        ItemCreate, AucServeUpdate, ItemUpdate,
-                        AuctionDelReq, ItemUpdateAuc, ItemInAucCreate)
+                        AuctionDelReq, ItemUpdateAuc, 
+                        ItemInAucCreate, PaginationModel)
 from services.listingService import listItem
 from db.main import get_db_session
 from fastapi import HTTPException
@@ -77,8 +78,6 @@ async def create_auction(item: ItemInAucCreate, auc_serve: AucServe, userData: U
         async with get_db_session() as session:#type:ignore
             async with session.begin():
                 if item.id:
-                    print("\n\nin itemid\n\n")
-
                     target_item = await session.get(Item, item.id)
                     if target_item is None:
                         raise HTTPException(404, detail="Item referenced does not exist")
@@ -95,7 +94,6 @@ async def create_auction(item: ItemInAucCreate, auc_serve: AucServe, userData: U
                     return {"success": True, "data":response}
 
                 elif not item.id:
-                    print("\n\nnot itemid\n\n")
                     data = ItemCreate(name=item.name, description=item.description, price=item.price, category=item.category, condition=item.condition)
                     try:
                         item_db_ = data.model_dump()
@@ -216,3 +214,16 @@ async def get_user_auctions(userData: UserPydantic):
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected error at get user auctions: {e}")
             
+
+async def fetchAllAuctions(pagination: PaginationModel):
+    async with get_db_session() as session:
+        try:
+            query = select(Auction).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+
+            auctions_ = await session.exec(query)
+            auctions = auctions_.all()
+
+        except Exception as e:
+            raise HTTPException(500, detail=f"Error fetching auctions from the database: {e}")
+
+        return auctions

@@ -1,4 +1,6 @@
-from db.models import ItemCreate, Item, ItemUpdate, DelItem, User, UserPydantic
+from db.models import (ItemCreate, Item, 
+                       ItemUpdate, DelItem, 
+                       User, UserPydantic, PaginationModel)
 from fastapi import HTTPException, Depends
 from sqlmodel import select, and_
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -87,3 +89,14 @@ async def fetchUserItems(user_id: UUID):
         else:
             raise HTTPException(404, detail="No items listed")
     
+async def fetchAllListings(pagination: PaginationModel):
+    try:
+        async with get_db_session() as session:
+            print(pagination)
+            query = select(Item).order_by(Item.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+
+            items_ = await session.exec(query)
+            items = items_.all()
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error in fetchAllListings service: {e}")
+    return items

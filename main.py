@@ -6,6 +6,7 @@ from routes.register import registerR
 from routes.login import loginR
 from routes.listing import listingR
 from routes.auction import auctionR
+from routes.bids import bidsR
 import asyncio
 from tasks.auction_status import update_auction_statuses
 import uvicorn
@@ -26,8 +27,12 @@ app.include_router(registerR)
 app.include_router(loginR)
 app.include_router(listingR)
 app.include_router(auctionR)
+app.include_router(bidsR)
 
-app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=("GET", "POST", "PUT", "DELETE"))
+
+app.add_middleware(CORSMiddleware, 
+                   allow_origins=['*'], 
+                   allow_methods=("GET", "POST", "PUT", "DELETE"))
 
 @app.get('/')
 def home():

@@ -1,16 +1,35 @@
 from fastapi import APIRouter, Depends, HTTPException
 from db.models import (AuctionReq, UserPydantic, ItemPydantic, 
                         AucServe, AucServeUpdate, AuctionUpdate,
-                         AuctionDelReq, ItemUpdateAuc, ItemInAucCreate)
+                         AuctionDelReq, ItemUpdateAuc, 
+                         ItemInAucCreate, PaginationModel)
 from typing import Annotated
+from utils.pagination import getPaginationParams
 from services.authService import get_current_user
-from services.auctionService import create_auction, update_auction, delete_auction, get_user_auctions
+from services.auctionService import create_auction, update_auction, delete_auction, get_user_auctions, fetchAllAuctions
 
 auctionR = APIRouter(prefix="/auction")
 
-@auctionR.get("/")
+@auctionR.get('/')
+async def getAllAuctions(pagination: Annotated[PaginationModel, Depends(getPaginationParams)],
+                         userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    try: 
+        response = await fetchAllAuctions(pagination)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error while fetchAllAuctions: {e}")
+    
+    return response
+
+@auctionR.get("/user-auctions")
 async def get_user_aucs(userData: Annotated[UserPydantic, Depends(get_current_user)]):
-    response = await get_user_auctions(userData)
+    try: 
+        response = await get_user_auctions(userData)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error in get user auctions: {e}")
     return response
 
 @auctionR.post("/")

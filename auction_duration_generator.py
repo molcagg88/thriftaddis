@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 # x minutes in the future
-x = 15  # for example
+x = 1  # for example
 y = 45
 future_time = datetime.now(timezone.utc) + timedelta(minutes=x)
 

@@ -73,9 +73,13 @@ class User(SQLModel, table=True):
     lname: str
     email: str = Field(unique=True)
     password: str
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
+    )
 
     items: List["Item"] = Relationship(back_populates= "seller", sa_relationship=relationship("Item", lazy="select"))#type:ignore
-    bids: List["Bid"] = Relationship(back_populates = "bidder", sa_relationship=relationship("Bid", lazy="select"))#type:ignore
+    bids: List["Bids"] = Relationship(back_populates = "user", sa_relationship=relationship("Bids", lazy="select"))#type:ignore
 
 class UserPydantic(BaseModel):
     class Config:
@@ -128,7 +132,7 @@ class Status(str, Enum):
     ended = "ENDED"
 
 class Auction(SQLModel, table=True):
-    auction_id: int = Field(primary_key=True)
+    auction_id: Optional[int] = Field(primary_key=True)
 
     starting_time: datetime = Field(
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
@@ -144,16 +148,10 @@ class Auction(SQLModel, table=True):
     starting_price: float
     status: Status = Field(index=True)
 
-    # One Auction has many Items:
     items: List[Item] = Relationship(back_populates="auction")
+    bids: List["Bids"] = Relationship(back_populates="auction")
     
-class Bid(SQLModel, table=True):
-    id: int = Field(primary_key=True, index=True)
-    bidder_id: UUID = Field(foreign_key="user.uid")
-    amount: float
-    bid_time: datetime = Field(default_factory= lambda: datetime.now(timezone.utc), nullable=False)
-    auction_id: int = Field(foreign_key="auction.auction_id", nullable=False)
-    bidder: Optional[User] = Relationship(back_populates="bids")#type:ignore
+
 
 class AuctionReq(BaseModel):
     @field_validator("ending_time")
@@ -195,13 +193,6 @@ class AucServeUpdate(BaseModel):
     ending_time: Optional[datetime]
 
 
-class BidRequest(BaseModel):
-    amount: float
-    auction_id: int
-
-class BidUpdate(BaseModel):
-    amount: float
-
 class ItemUpdateAuc(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
@@ -222,3 +213,27 @@ class ItemInAucCreate(BaseModel):
     category: Optional[str] = None
     condition: Optional[Conditions] = None
     seller_id: Optional[UUID] = None
+
+class PaginationModel(BaseModel):
+    limit: int
+    offset: int
+
+class Bids(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    auction_id: int = Field(foreign_key="auction.auction_id")
+    user_id: UUID = Field(foreign_key="user.uid")
+    amount: float
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
+    )
+
+    user: Optional["User"] = Relationship(back_populates="bids")
+    auction: Auction = Relationship(back_populates="bids")
+class BidRequest(BaseModel):
+    amount: float
+    auction_id: int
+
+class BidUpdate(BaseModel):
+    bid_id: int
+    amount: float
