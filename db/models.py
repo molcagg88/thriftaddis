@@ -237,3 +237,15 @@ class BidRequest(BaseModel):
 class BidUpdate(BaseModel):
     bid_id: int
     amount: float
+
+class UserPublic(BaseModel):
+    username: str
+    fname: str
+    lname: str
+
+class BidBroadcast(BaseModel):
+    id: int
+    auction_id: Optional[int]=None
+    user: Optional[UserPublic]=None
+    amount: float
+    created_at: str

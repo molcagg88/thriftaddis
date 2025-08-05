@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from db.main import get_session, get_db_session
 from sqlmodel import select
-from db.models import UserPydantic, BidRequest, Bids, BidUpdate
+from db.models import UserPydantic, BidRequest, Bids, BidUpdate, BidBroadcast, UserPublic
 from typing import Annotated
+import copy
+from pydantic import create_model
+from utils.websockets import manager
 
 async def create_bid(bidData: BidRequest, userData: UserPydantic):
     to_add = Bids(user_id=userData.uid, amount=bidData.amount, auction_id=bidData.auction_id)
@@ -19,6 +22,10 @@ async def create_bid(bidData: BidRequest, userData: UserPydantic):
             await session.commit()
             await session.flush()
             await session.refresh(to_add)
+            creator = UserPublic(username = userData.username, fname=userData.fname, lname = userData.lname)
+            to_broad = BidBroadcast(id = to_add.id, auction_id=to_add.auction_id, user=creator, amount = to_add.amount, created_at=str(to_add.created_at))
+            await manager.broadcast({"new":to_broad.model_dump()})
+            print("broadcasted")
         except HTTPException:
             raise
         except Exception as e:
@@ -50,6 +57,10 @@ async def update_bid(bidUpdate: BidUpdate, userData: UserPydantic):
             users_bid.amount = bidUpdate.amount
             await session.commit()
             await session.refresh(users_bid)
+            creator = UserPublic(username = userData.username, fname=userData.fname, lname = userData.lname)
+            to_broad = BidBroadcast(id = users_bid.id, auction_id=users_bid.auction_id, user=creator, amount = users_bid.amount, created_at=str(users_bid.created_at))
+            await manager.broadcast({"update":to_broad.model_dump()})
+            print("broadcasted")
         except HTTPException:
             raise
         except Exception as e:
@@ -67,7 +78,8 @@ async def delete_bid(bid_id: int, userData: UserPydantic):
             
             session.delete(target)
             await session.commit()
-
+            await manager.broadcast({"delete":bid_id})
+            print("broadcasted")
         except HTTPException:
             raise
         except Exception as e:

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebSocket Test</title>
+  </head>
+  <body>
+    <h2>WebSocket Client</h2>
+    <pre id="log"></pre>
+
+    <script>
+      const log = (msg) => {
+        console.log(msg);
+        document.getElementById("log").textContent += msg + "\n";
+      };
+
+      const token =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlIiwiZXhwIjoxNzU0MzY2NTY0LjYyNzEzMX0._8eCLDkNxpkALXE5UqEvEPaMGsACfA8V6zqiY0Hl5YY"; // Replace with a valid token
+      const socket = new WebSocket("ws://localhost:9000/auction/1");
+
+      socket.onopen = () => {
+        log("✅ Connection opened");
+
+        // Send authentication token immediately after connection
+        socket.send(JSON.stringify({ token }));
+
+        // You can optionally send ping messages to keep the connection alive
+        // setInterval(() => {
+        //   socket.send("ping");
+        //   log("→ Sent: ping");
+        // }, 5000);
+      };
+
+      socket.onmessage = (event) => {
+        log("📥 Message: " + event.data);
+      };
+
+      socket.onerror = (error) => {
+        log("❌ WebSocket error: " + error);
+      };
+
+      socket.onclose = (event) => {
+        log(`🔌 Connection closed (code ${event.code})`);
+      };
+    </script>
+  </body>
+</html>

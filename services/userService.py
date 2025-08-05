@@ -27,6 +27,9 @@ async def get_user(username:Optional[str]=None, uid:Optional[UUID]=None):
             response = response_.first()
         if response:
             user = UserPydantic.model_validate(response.model_dump())
-            return user
+            
+    except HTTPException:
+        raise
     except Exception as e:
         raise e
+    return user

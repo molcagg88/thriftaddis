@@ -38,3 +38,36 @@ async def update_auction_statuses():
             print("Error updating auction statuses:", e)
 
         await asyncio.sleep(60)  # wait 60 seconds before checking again
+
+async def update_auction_statuses_once():
+    try:
+        async with get_db_session() as session:
+            now = datetime.now(timezone.utc)
+
+            # Ended auctions
+            result = await session.exec(
+                select(Auction).where(
+                    Auction.status != "ended",
+                    Auction.ending_time < now
+                )
+            )
+            for auction in result.all():
+                auction.status = Status.ended
+
+            # Live auctions
+            result = await session.exec(
+                select(Auction).where(
+                    Auction.status != "live",
+                    Auction.starting_time <= now,
+                    Auction.ending_time > now
+                )
+            )
+            for auction in result:
+                auction.status = Status.live
+
+            await session.commit()
+            print("\n\n\n\n\nAuction statuses updated.\n\n\n\n\n\n\n")
+
+    except Exception as e:
+        print("Error updating auction statuses:", e)
+

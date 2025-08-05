@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (APIRouter, Depends, 
+                     HTTPException, WebSocket, 
+                     WebSocketDisconnect)
 from db.models import (AuctionReq, UserPydantic, ItemPydantic, 
                         AucServe, AucServeUpdate, AuctionUpdate,
                          AuctionDelReq, ItemUpdateAuc, 
@@ -6,7 +8,11 @@ from db.models import (AuctionReq, UserPydantic, ItemPydantic,
 from typing import Annotated
 from utils.pagination import getPaginationParams
 from services.authService import get_current_user
-from services.auctionService import create_auction, update_auction, delete_auction, get_user_auctions, fetchAllAuctions
+from tasks.auction_status import update_auction_statuses_once
+from services.auctionService import (create_auction, update_auction, 
+                                     delete_auction, get_user_auctions, 
+                                     fetchAllAuctions, check_auction_status)
+from utils.websockets import manager
 
 auctionR = APIRouter(prefix="/auction")
 
@@ -52,6 +58,7 @@ async def updateAuction(data: AuctionUpdate, userData: Annotated[UserPydantic, D
         response = await update_auction(auc=to_upd, auc_serve_update=AucServeUpdate(auction_id=data.auction_id, starting_time=getattr(data, "starting_time", None), ending_time=getattr(data, "ending_time", None)), userData=userData)
         if not response["success"]:
             raise HTTPException(500, detail="Unknown error during update_auction")
+        await update_auction_statuses_once()
         return response
     except HTTPException:
         raise
@@ -70,3 +77,34 @@ async def delete_auc(del_request: AuctionDelReq, userData: Annotated[UserPydanti
         raise
     except Exception as e:
         raise HTTPException(500, detail="Unexpected error in delete auction route: {e}")
+
+@auctionR.websocket("/{auction_id}")
+async def websocket_endpoint(auction_id: int, websocket: WebSocket):
+    await check_auction_status(auction_id)
+    await websocket.accept()
+    try:
+        # Expect auth message immediately
+        auth_data = await websocket.receive_json()
+        token = auth_data.get("token")
+        if not token:
+            await websocket.close(code=1008)  # Policy Violation
+            return
+
+        try:
+            userData = await get_current_user(token)
+            manager.userData = userData
+        except:
+            await websocket.close(code=1008)
+            return
+
+        await manager.connect(websocket)
+
+        while True:
+            await websocket.receive_text()  # Keeps alive
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@auctionR.get('/send')
+async def sendd():
+    bih = 45
+    await manager.broadcast({"update":bih})

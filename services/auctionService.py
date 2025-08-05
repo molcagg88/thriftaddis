@@ -214,7 +214,6 @@ async def get_user_auctions(userData: UserPydantic):
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected error at get user auctions: {e}")
             
-
 async def fetchAllAuctions(pagination: PaginationModel):
     async with get_db_session() as session:
         try:
@@ -227,3 +226,15 @@ async def fetchAllAuctions(pagination: PaginationModel):
             raise HTTPException(500, detail=f"Error fetching auctions from the database: {e}")
 
         return auctions
+    
+async def check_auction_status(auction_id: int):
+    async with get_db_session() as session:
+        auction = await session.get(Auction, auction_id)
+        if auction is None:
+            print("auction not found")
+            raise HTTPException(404, detail="Auction not found")
+        if auction.status!=Status.live:
+            print("auction not live")
+            raise HTTPException(400, detail="Auction is not live")
+    return True
+        
