@@ -148,7 +148,7 @@ class Auction(SQLModel, table=True):
     starting_price: float
     status: Status = Field(index=True)
 
-    items: List[Item] = Relationship(back_populates="auction")
+    items: Item = Relationship(back_populates="auction")
     bids: List["Bids"] = Relationship(back_populates="auction")
     
 
@@ -166,6 +166,7 @@ class AuctionReq(BaseModel):
     category: Optional[str] = None
     condition: Optional[Conditions] = None
     starting_time: datetime
+    starting_price: Optional[float] = None
     ending_time: datetime
 
 class AuctionUpdate(BaseModel):
@@ -186,11 +187,13 @@ class AuctionUpdate(BaseModel):
 class AucServe(BaseModel):
     starting_time: datetime
     ending_time: datetime
+    starting_price: Optional[float]=None
 
 class AucServeUpdate(BaseModel):
     auction_id: int
     starting_time: Optional[datetime]
     ending_time: Optional[datetime]
+    starting_price: Optional[float] = None
 
 
 class ItemUpdateAuc(BaseModel):
@@ -203,7 +206,7 @@ class ItemUpdateAuc(BaseModel):
 
 class AuctionDelReq(BaseModel):
     auction_id: int
-    keep_item: bool
+    keep_item: bool=True 
 
 class ItemInAucCreate(BaseModel):
     id: Optional[int] = None
@@ -249,3 +252,16 @@ class BidBroadcast(BaseModel):
     user: Optional[UserPublic]=None
     amount: float
     created_at: str
+
+class Fetch_ended_truth(BaseModel):
+    truth: bool
+
+class RenewReq(BaseModel):
+    auction_id: int
+    starting_time: Optional[datetime] = None
+    ending_time: Optional[datetime] = None
+    new_starting_price: Optional[float] = None
+
+class TimeGenResponse(BaseModel):
+    starting_time: datetime
+    ending_time: datetime

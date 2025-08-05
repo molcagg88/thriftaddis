@@ -39,7 +39,7 @@ async def update_bid(bidUpdate: BidUpdate, userData: UserPydantic):
             users_bid= await session.get(Bids, bidUpdate.bid_id)
             if not users_bid:
                 raise HTTPException(404, detail="bid not found")
-            res2 = await session.exec(select(Bids).order_by(Bids.created_at.desc()).where(Bids.user_id==userData.uid))
+            res2 = await session.exec(select(Bids).where(Bids.user_id==userData.uid).order_by(Bids.created_at.desc()))
             users_bids = res2.all()
             if users_bid != users_bids[0]:
                 raise HTTPException(403, detail="Only user's latest bid can be updated")
@@ -59,7 +59,7 @@ async def update_bid(bidUpdate: BidUpdate, userData: UserPydantic):
             await session.refresh(users_bid)
             creator = UserPublic(username = userData.username, fname=userData.fname, lname = userData.lname)
             to_broad = BidBroadcast(id = users_bid.id, auction_id=users_bid.auction_id, user=creator, amount = users_bid.amount, created_at=str(users_bid.created_at))
-            await manager.broadcast({"update":to_broad.model_dump()})
+            await manager.broadcast({"update_bid":to_broad.model_dump()})
             print("broadcasted")
         except HTTPException:
             raise
@@ -88,7 +88,7 @@ async def delete_bid(bid_id: int, userData: UserPydantic):
 async def fetch_bids(auction_id: int):
     async with get_db_session() as session:
         try:
-            query = select(Bids).order_by(Bids.created_at.desc()).where(Bids.auction_id==auction_id)
+            query = select(Bids).where(Bids.auction_id==auction_id).order_by(Bids.created_at.desc())
             res = await session.exec(query)
             bids = res.all()
         except Exception as e:

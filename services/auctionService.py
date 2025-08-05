@@ -2,7 +2,7 @@ from db.models import (ItemPydantic, UserPydantic,
                        Item, Auction, AucServe, Status, 
                        ItemCreate, AucServeUpdate, ItemUpdate,
                         AuctionDelReq, ItemUpdateAuc, 
-                        ItemInAucCreate, PaginationModel)
+                        ItemInAucCreate, PaginationModel, RenewReq)
 from services.listingService import listItem
 from db.main import get_db_session
 from fastapi import HTTPException
@@ -12,6 +12,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from services.listingService import updateItem, delListing
 from utils.auctionUtil import update_if_changed
 from sqlalchemy.orm import selectinload
+from utils.websockets import manager
+from tasks.auction_status import update_auction_statuses_once
 from typing import Optional
 
 async def auction_mini_service(session: AsyncSession, item: Item, auc_serve: AucServe):
@@ -33,8 +35,10 @@ async def auction_mini_service(session: AsyncSession, item: Item, auc_serve: Auc
                 status = Status.upcoming
             else:
                 status = Status.ended 
+            if not auc_serve.starting_price:
+                auc_serve.starting_price = item.price
             
-            new_auc = Auction(item_id=item.id, starting_time=auc_serve.starting_time, ending_time=auc_serve.ending_time, status=status, starting_price=item.price)#type:ignore
+            new_auc = Auction(item_id=item.id, starting_time=auc_serve.starting_time, ending_time=auc_serve.ending_time, status=status, starting_price=auc_serve.starting_price)#type:ignore
             session.add(new_auc)
             
             return new_auc
@@ -60,8 +64,10 @@ async def auction_mini_service_NI(session: AsyncSession, item: Item, auc_serve: 
             status = Status.upcoming
         else:
             status = Status.ended 
-        
-        new_auc = Auction(item_id=item.id, starting_time=auc_serve.starting_time, ending_time=auc_serve.ending_time, status=status, starting_price=item.price)#type:ignore
+        if not auc_serve.starting_price:
+            auc_serve.starting_price = item.price
+            
+        new_auc = Auction(item_id=item.id, starting_time=auc_serve.starting_time, ending_time=auc_serve.ending_time, status=status, starting_price=auc_serve.starting_price)#type:ignore
         session.add(new_auc)
         
         return new_auc
@@ -143,8 +149,13 @@ async def update_auction(auc: ItemUpdateAuc, auc_serve_update: AucServeUpdate, u
                     raise HTTPException(404, detail="Auction entry not found")
                 item_ = await session.exec(select(Item).where(Item.auction_id==auc_serve_update.auction_id))
                 item = item_.one_or_none()
+                if not item:
+                    raise HTTPException(404, detail=f"Item not found")
                 if item.seller_id != userData.uid:
                     raise HTTPException(403, detail="user not allowed to update auction")
+                
+                #Item checking for updates could be more efficient if request could specify whether the item is being updated too or not
+
                 auct_update_ = auc_serve_update.model_dump(exclude_unset=True)
                 auct_update = {k:v for k, v in auct_update_.items() if v is not None}
                 update_if_changed(to_update, auct_update)
@@ -153,10 +164,9 @@ async def update_auction(auc: ItemUpdateAuc, auc_serve_update: AucServeUpdate, u
                 if not item_update_res["success"]:
                     await session.rollback()
                     raise HTTPException(400, detail="Unknown error, triggered at update item via auction update")
-                
-                return {"success":True, "data":{"auction":to_update, "item":item_update_res["data"]}}
-                    
-                
+                await manager.broadcast({"update_auction":{"auction":to_update, "item":item_update_res["data"]}})
+                await update_auction_statuses_once()
+                           
             
     except HTTPException:
         raise
@@ -165,6 +175,7 @@ async def update_auction(auc: ItemUpdateAuc, auc_serve_update: AucServeUpdate, u
             status_code=500,
             detail=f"Internal server error during auction update: {e}"
         )
+    return {"success":True, "data":{"auction":to_update, "item":item_update_res["data"]}}
 
 async def delete_auction(del_req: AuctionDelReq, userData: UserPydantic):
     try:
@@ -214,10 +225,13 @@ async def get_user_auctions(userData: UserPydantic):
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected error at get user auctions: {e}")
             
-async def fetchAllAuctions(pagination: PaginationModel):
+async def fetchAllAuctions(pagination: PaginationModel, fetch_ended: bool):
     async with get_db_session() as session:
         try:
-            query = select(Auction).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+            if fetch_ended:
+                query = select(Auction).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+            else:
+                query = select(Auction).where(Auction.status!=Status.ended).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
 
             auctions_ = await session.exec(query)
             auctions = auctions_.all()
@@ -227,6 +241,18 @@ async def fetchAllAuctions(pagination: PaginationModel):
 
         return auctions
     
+async def loadAuction(auction_id: int):
+    async with get_db_session() as session:
+        try:
+            query = select(Auction).where(Auction.auction_id==auction_id).options(selectinload(Auction.items))
+            res=await session.exec(query)
+            auction=res.one_or_none()
+        except Exception as e:
+            raise HTTPException(500, detail=f"Unexpected error at load auction: {e}")
+
+        return auction
+
+
 async def check_auction_status(auction_id: int):
     async with get_db_session() as session:
         auction = await session.get(Auction, auction_id)

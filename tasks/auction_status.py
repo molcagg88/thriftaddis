@@ -66,7 +66,7 @@ async def update_auction_statuses_once():
                 auction.status = Status.live
 
             await session.commit()
-            print("\n\n\n\n\nAuction statuses updated.\n\n\n\n\n\n\n")
+            print("\nAuction statuses updated.\n")
 
     except Exception as e:
         print("Error updating auction statuses:", e)

@@ -32,7 +32,7 @@ async def updateBid(bid_upd: BidUpdate, userData: Annotated[UserPydantic, Depend
     
     return {"success": True, "data":response}
 """
-Broadcasts a {"update":<updated bid data>} to the websocket
+Broadcasts a {"update_bid":<updated bid data>} to the websocket
 """
 
 @bidsR.delete("/{bid_id}", status_code=204)
