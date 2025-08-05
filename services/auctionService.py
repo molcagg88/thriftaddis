@@ -229,28 +229,31 @@ async def fetchAllAuctions(pagination: PaginationModel, fetch_ended: bool):
     async with get_db_session() as session:
         try:
             if fetch_ended:
-                query = select(Auction).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+                query = select(Auction).options(selectinload(Auction.items)).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
             else:
-                query = select(Auction).where(Auction.status!=Status.ended).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+                query = select(Auction).options(selectinload(Auction.items).selectinload(Item.seller)).where(Auction.status!=Status.ended).order_by(Auction.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
 
             auctions_ = await session.exec(query)
             auctions = auctions_.all()
 
+            to_send = []
+            for auction in auctions:
+                to_send.append({"auction":auction, "user":auction.items.seller})
         except Exception as e:
             raise HTTPException(500, detail=f"Error fetching auctions from the database: {e}")
 
-        return auctions
+        return to_send
     
 async def loadAuction(auction_id: int):
     async with get_db_session() as session:
         try:
-            query = select(Auction).where(Auction.auction_id==auction_id).options(selectinload(Auction.items))
+            query = select(Auction).where(Auction.auction_id==auction_id).options(selectinload(Auction.items).selectinload(Item.seller))
             res=await session.exec(query)
             auction=res.one_or_none()
         except Exception as e:
             raise HTTPException(500, detail=f"Unexpected error at load auction: {e}")
 
-        return {"auction":auction, "item":auction.items}
+        return {"auction":auction, "item":auction.items, "user":auction.items.seller}
 
 
 

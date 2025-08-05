@@ -44,31 +44,31 @@ async def get_user_aucs(userData: Annotated[UserPydantic, Depends(get_current_us
 
 @auctionR.post("/")
 async def createAuction(data: AuctionReq, userData: Annotated[UserPydantic, Depends(get_current_user)]):
-    if not data.item_id:
-        to_auc = ItemInAucCreate(name=data.name, seller_id=userData.uid, description=data.description, price=data.price, category=data.category, condition=data.condition)
-    elif data.item_id:
-        to_auc = ItemInAucCreate(id=data.item_id)
+    try:
+        if not data.item_id:
+            to_auc = ItemInAucCreate(name=data.name, seller_id=userData.uid, description=data.description, price=data.price, category=data.category, condition=data.condition)
+        else:
+            to_auc = ItemInAucCreate(id=data.item_id)
 
-    response = await create_auction(item=to_auc, auc_serve=AucServe(starting_time=data.starting_time, ending_time=data.ending_time, starting_price=data.starting_price), userData=userData)
-    if response["success"]:#type:ignore
-        return response
-    else:
-        raise HTTPException(400, detail="Unknwon error, check log")
+        response = await create_auction(item=to_auc, auc_serve=AucServe(starting_time=data.starting_time, ending_time=data.ending_time, starting_price=data.starting_price), userData=userData)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"error at create auction route: {e}")
+    return response
     
 @auctionR.put("/")
 async def updateAuction(data: AuctionUpdate, userData: Annotated[UserPydantic, Depends(get_current_user)]):
     to_upd = ItemUpdateAuc(name=getattr(data, "name", None), description=getattr(data, "description", None), price=getattr(data, "price", None), category=getattr(data, "category", None), condition=getattr(data, "condition", None))
     try:
         response = await update_auction(auc=to_upd, auc_serve_update=AucServeUpdate(auction_id=data.auction_id, starting_time=getattr(data, "starting_time", None), ending_time=getattr(data, "ending_time", None), starting_price=data.price), userData=userData)
-        if not response["success"]:
-            raise HTTPException(500, detail="Unknown error during update_auction")
         await update_auction_statuses_once()
-        return response
+        
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected exception triggered in updateAuction, {e}")
-    
+    return response
 '''
 Broadcasts a {"update_auction":{"auction":<auction data>, "item": <item data>}}
 '''

@@ -28,12 +28,13 @@ async def getUserListings(userData: Annotated[UserPydantic, Depends(get_current_
 
 @listingR.post('/')
 async def createListing(listing_data: ItemCreate, userData: Annotated[UserPydantic, Depends(get_current_user)]):
-    
-    response = await listItem(listing_data, userData)
-    if response["success"]:
-        return response
-    else:
-        raise HTTPException(400, detail="Failed to create listing")
+    try:
+        response = await listItem(listing_data, userData)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error in create listing: {e}")
+    return response
     
 @listingR.put('/')
 async def updateListing(update_data: ItemUpdate, userData: Annotated[UserPydantic, Depends(get_current_user)]):

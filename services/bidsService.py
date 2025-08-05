@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from db.main import get_session, get_db_session
+from fastapi import HTTPException
+from db.main import get_db_session
 from sqlmodel import select
 from db.models import UserPydantic, BidRequest, Bids, BidUpdate, BidBroadcast, UserPublic
-from typing import Annotated
-import copy
-from pydantic import create_model
 from utils.websockets import manager
+from sqlalchemy.orm import selectinload
+
+"""
+User data responses are manually loaded in this module, except for fetch_bids()!
+"""
 
 async def create_bid(bidData: BidRequest, userData: UserPydantic):
     to_add = Bids(user_id=userData.uid, amount=bidData.amount, auction_id=bidData.auction_id)
@@ -88,12 +90,16 @@ async def delete_bid(bid_id: int, userData: UserPydantic):
 async def fetch_bids(auction_id: int):
     async with get_db_session() as session:
         try:
-            query = select(Bids).where(Bids.auction_id==auction_id).order_by(Bids.created_at.desc())
+            query = select(Bids).options(selectinload(Bids.user)).where(Bids.auction_id==auction_id).order_by(Bids.created_at.desc())
             res = await session.exec(query)
             bids = res.all()
+
+            to_send=[]
+            for bid in bids:
+                to_send.append({"bid":bid, "user":bid.user})
         except Exception as e:
             raise HTTPException(500, detail=f"Unknown error occured in fetch_bids service: {e}")
-        return bids
+        return to_send
 
 async def getUserBids(userData: UserPydantic):
     async with get_db_session() as session:

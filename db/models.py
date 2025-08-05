@@ -78,8 +78,8 @@ class User(SQLModel, table=True):
         sa_column=Column(TIMESTAMP(timezone=True), nullable=False)
     )
 
-    items: List["Item"] = Relationship(back_populates= "seller", sa_relationship=relationship("Item", lazy="select"))#type:ignore
-    bids: List["Bids"] = Relationship(back_populates = "user", sa_relationship=relationship("Bids", lazy="select"))#type:ignore
+    items: List["Item"] = Relationship(back_populates= "seller")
+    bids: List["Bids"] = Relationship(back_populates = "user")
 
 class UserPydantic(BaseModel):
     class Config:

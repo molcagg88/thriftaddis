@@ -20,10 +20,10 @@ async def listItem(data: ItemCreate, userData: UserPydantic):
             session.add(item_db)
             await session.commit()
             await session.refresh(item_db)
-        return {'success':True, 'data':item_db}
     except Exception as e:
-        raise e
-    
+        raise HTTPException(500, detail=f"error at listitem service: {e}")
+    return {'success':True, 'data':item_db}
+
 async def updateItem(
     update_data: ItemUpdate, 
     userData: UserPydantic, 
@@ -93,10 +93,14 @@ async def fetchAllListings(pagination: PaginationModel):
     try:
         async with get_db_session() as session:
             print(pagination)
-            query = select(Item).order_by(Item.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
+            query = select(Item).options(selectinload(Item.seller)).order_by(Item.created_at.desc()).offset(pagination.offset).limit(pagination.limit)
 
             items_ = await session.exec(query)
             items = items_.all()
+
+            to_send = []
+            for item in items:
+                to_send.append({"item":item,"user":item.seller})
     except Exception as e:
         raise HTTPException(500, detail=f"Unexpected error in fetchAllListings service: {e}")
-    return items
+    return to_send
