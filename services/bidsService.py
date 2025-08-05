@@ -94,4 +94,14 @@ async def fetch_bids(auction_id: int):
         except Exception as e:
             raise HTTPException(500, detail=f"Unknown error occured in fetch_bids service: {e}")
         return bids
+
+async def getUserBids(userData: UserPydantic):
+    async with get_db_session() as session:
+        try:
+            query=select(Bids).where(Bids.user_id == userData.uid).order_by(Bids.created_at.desc())
+            res = await session.exec(query)
+            bids = res.all()
+        except Exception as e:
+            raise HTTPException(500, detail=f"Unexpected error occured fetching user's bids: {e}")
+        return bids
         

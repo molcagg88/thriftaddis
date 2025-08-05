@@ -2,7 +2,7 @@ from db.models import (ItemPydantic, UserPydantic,
                        Item, Auction, AucServe, Status, 
                        ItemCreate, AucServeUpdate, ItemUpdate,
                         AuctionDelReq, ItemUpdateAuc, 
-                        ItemInAucCreate, PaginationModel, RenewReq)
+                        ItemInAucCreate, PaginationModel, AucClose)
 from services.listingService import listItem
 from db.main import get_db_session
 from fastapi import HTTPException
@@ -250,9 +250,30 @@ async def loadAuction(auction_id: int):
         except Exception as e:
             raise HTTPException(500, detail=f"Unexpected error at load auction: {e}")
 
+        return {"auction":auction, "item":auction.items}
+
+
+
+        
+async def close_auction(data: AucClose, userData: UserPydantic):
+    async with get_db_session() as session:
+        try:
+            query = select(Auction).where(Auction.auction_id==data.auction_id).options(selectinload(Auction.items))
+            res = await session.exec(query)
+            auction = res.one_or_none()
+            if not auction:
+                raise HTTPException(404, detail="Auction to close not found")
+            if auction.items.seller_id != userData.uid:
+                raise HTTPException(401, detail="User unauthorized to close this auction")
+            auction.ending_time=datetime.now(timezone.utc)
+            await session.commit()
+            await session.refresh(auction)
+            await update_auction_statuses_once()
+            await session.refresh(auction)
+        except Exception as e:
+            raise HTTPException(500, detail=f"Unexpected error in close auction service: {e}")
         return auction
-
-
+    
 async def check_auction_status(auction_id: int):
     async with get_db_session() as session:
         auction = await session.get(Auction, auction_id)
@@ -263,4 +284,25 @@ async def check_auction_status(auction_id: int):
             print("auction not live")
             raise HTTPException(400, detail="Auction is not live")
     return True
-        
+
+async def check_auction_not_ended(auction_id: int):
+    async with get_db_session() as session:
+        auction = await session.get(Auction, auction_id)
+        if auction is None:
+            print("auction not found")
+            raise HTTPException(404, detail="Auction not found")
+        if auction.status==Status.ended:
+            print("auction closed")
+            raise HTTPException(400, detail="Auction is closed")
+    return True
+
+async def check_auction_closed(auction_id: int):
+    async with get_db_session() as session:
+        auction = await session.get(Auction, auction_id)
+        if auction is None:
+            print("auction not found")
+            raise HTTPException(404, detail="Auction not found")
+        if auction.status!=Status.ended:
+            print("auction closed")
+            raise HTTPException(400, detail="Auction is not closed")
+    return True

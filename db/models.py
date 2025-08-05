@@ -217,6 +217,9 @@ class ItemInAucCreate(BaseModel):
     condition: Optional[Conditions] = None
     seller_id: Optional[UUID] = None
 
+class AucClose(BaseModel):
+    auction_id: int
+
 class PaginationModel(BaseModel):
     limit: int
     offset: int

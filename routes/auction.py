@@ -5,7 +5,7 @@ from db.models import (AuctionReq, UserPydantic, ItemPydantic,
                         AucServe, AucServeUpdate, AuctionUpdate,
                          AuctionDelReq, ItemUpdateAuc, 
                          ItemInAucCreate, PaginationModel, 
-                         Fetch_ended_truth, RenewReq)
+                         Fetch_ended_truth, RenewReq, AucClose)
 from typing import Annotated
 from utils.pagination import getPaginationParams
 from utils.auctionUtil import fetchEnded, generate_auction_times
@@ -14,7 +14,7 @@ from tasks.auction_status import update_auction_statuses_once
 from services.auctionService import (create_auction, update_auction, 
                                      delete_auction, get_user_auctions, 
                                      fetchAllAuctions, check_auction_status, 
-                                     loadAuction)
+                                     loadAuction, close_auction, check_auction_not_ended, check_auction_closed)
 from utils.websockets import manager
 
 auctionR = APIRouter(prefix="/auction")
@@ -124,6 +124,7 @@ async def load_auction(auction_id: int, userData: Annotated[UserPydantic, Depend
 
 @auctionR.put("/renew")
 async def renewAuction(data: RenewReq, userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    await check_auction_closed(data.auction_id)
     try:
         to_upd = ItemUpdateAuc(name=None, description=None, price= None, category=None, condition=None)
         if (not data.starting_time and data.ending_time) or \
@@ -142,6 +143,16 @@ async def renewAuction(data: RenewReq, userData: Annotated[UserPydantic, Depends
         raise HTTPException(500, detail=f"Unexpected error in renewAuction: {e}")
     return response
 
+@auctionR.put('/close')
+async def closeAuction(data: AucClose, userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    await check_auction_not_ended(data.auction_id)
+    try:
+        response = await close_auction(data, userData)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error in close auction: {e}")
+    return {"success":True, "auction":response}
 
 @auctionR.get('/send')
 async def sendd():

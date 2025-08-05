@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from services.authService import get_current_user
 from db.models import UserPydantic, BidRequest, BidUpdate
-from services.bidsService import create_bid, update_bid, delete_bid, fetch_bids
+from services.bidsService import (create_bid, update_bid, 
+                                  delete_bid, fetch_bids,
+                                  getUserBids)
 from typing import Annotated
 
 
@@ -42,10 +44,20 @@ async def deleteBid(bid_id: int, userData: Annotated[UserPydantic, Depends(get_c
 """
 Broadcasts a {"delete":<bid_id>} to the websocket
 """
+@bidsR.get('/users_bids')
+async def fetch_users_bids(userData: Annotated[UserPydantic, Depends(get_current_user)]):
+    try:    
+        response = await getUserBids(userData)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Unexpected error in fetch users bids: {e}")
+    return response
 
-
-@bidsR.get('/{auction_id}')
+@bidsR.get('/auction_bids/{auction_id}')
 async def getAllBids(auction_id: int, userData: Annotated[UserPydantic, Depends(get_current_user)]):
     return await fetch_bids(auction_id)
+
+
 
 
